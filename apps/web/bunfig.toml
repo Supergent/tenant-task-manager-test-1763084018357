@@ -1,0 +1,25 @@
+# Bun configuration for faster installs and builds
+
+[install]
+# Use exact versions from lockfile for reproducible builds
+exact = true
+
+# NPM registry
+registry = "https://registry.npmjs.org"
+
+# Enable caching for faster subsequent installs
+cache = true
+
+# Production optimization
+production = false
+
+[install.lockfile]
+# Save lockfile (bun.lockb)
+save = true
+
+# Print lockfile in yarn format for readability
+print = "yarn"
+
+[install.scopes]
+# Optional: Configure scoped registries if needed
+# "@myorg" = "https://registry.myorg.com"

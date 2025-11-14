@@ -1,0 +1,23 @@
+name = "task-manager-test-1763084018357"
+main = "dist/server/index.js"
+compatibility_date = "2025-01-20"
+compatibility_flags = ["nodejs_compat"]
+
+# Build configuration with Bun + Vite
+[build]
+command = "bun install --frozen-lockfile && bun run build"
+cwd = "."
+watch_dirs = ["src"]
+
+# Observability
+[observability]
+enabled = true
+
+# Environment variables
+# These will be set programmatically via Cloudflare API during deployment
+[vars]
+# VITE_CONVEX_URL will be injected by workflow
+
+# Assets configuration (Vite builds to dist/)
+[site]
+bucket = "dist/client"

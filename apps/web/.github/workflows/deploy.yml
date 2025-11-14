@@ -1,0 +1,66 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main
+  # Allow manual deployment from Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Workers with Bun
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build application
+        run: bun run build
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      - name: Configure custom domain route
+        run: |
+          WORKER_NAME="{{workerName}}"
+          DOMAIN="{{customDomain}}"
+
+          echo "Configuring domain route: $DOMAIN/* → $WORKER_NAME"
+
+          # Check if route already exists
+          EXISTING_ROUTE=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/workers/routes" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" | jq -r ".result[] | select(.pattern == \"$DOMAIN/*\") | .id")
+
+          if [ -n "$EXISTING_ROUTE" ]; then
+            echo "Route already exists (ID: $EXISTING_ROUTE), updating..."
+            curl -X PUT \
+              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/workers/routes/$EXISTING_ROUTE" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"pattern\": \"$DOMAIN/*\", \"script\": \"$WORKER_NAME\"}"
+          else
+            echo "Creating new route..."
+            curl -X POST \
+              "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/workers/routes" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"pattern\": \"$DOMAIN/*\", \"script\": \"$WORKER_NAME\"}"
+          fi
+
+          echo "✅ Domain route configured successfully"
